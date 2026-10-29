@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Launcher apps enumerate other launchable apps via this query instead of QUERY_ALL_PACKAGES. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Draws the AI assistant bubble over other apps/the Linux desktop; requested at runtime, never assumed. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:name=".A1LauncherApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.A1Launcher"
+        android:enableOnBackInvokedCallback="true">
+
+        <!-- Home screen: the launcher surface itself. One task, HOME category. -->
+        <activity
+            android:name=".home.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:theme="@style/Theme.A1Launcher.NoActionBar"
+            android:windowSoftInputMode="adjustPan"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- First-launch setup wizard: Arch bootstrap, Sway install, agent CLI picker. -->
+        <activity
+            android:name=".setup.SetupWizardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.A1Launcher" />
+
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.A1Launcher" />
+
+        <!--
+          The Linux desktop session (Sway, under proot-distro Arch) as its own native
+          Android task. A distinct taskAffinity plus singleTask is what gives it its
+          own Recents card, separate from the launcher home task, per the
+          "single Linux Desktop task" design (see README: Linux GUI Integration).
+        -->
+        <activity
+            android:name=".linuxdesktop.LinuxDesktopActivity"
+            android:exported="false"
+            android:taskAffinity="com.a1launcher.linuxdesktop"
+            android:launchMode="singleTask"
+            android:documentLaunchMode="never"
+            android:excludeFromRecents="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
+            android:theme="@style/Theme.A1Launcher.NoActionBar"
+            android:resizeableActivity="true"
+            android:screenOrientation="unspecified" />
+
+        <activity
+            android:name=".assistant.AssistantChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.A1Launcher"
+            android:excludeFromRecents="true" />
+
+        <!-- Floating assistant bubble, foreground service so it survives while other tasks are in front. -->
+        <service
+            android:name=".assistant.AssistantOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="ai_agent_overlay_bubble" />
+        </service>
+
+        <!-- Long-running proot-distro bootstrap / package install, reported back via LiveData/Flow. -->
+        <service
+            android:name=".linux.ProotInstallService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="linux_environment_setup" />
+        </service>
+
+        <receiver
+            android:name=".widget.AgentStatusWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/agent_status_widget_info" />
+        </receiver>
+
+    </application>
+</manifest>

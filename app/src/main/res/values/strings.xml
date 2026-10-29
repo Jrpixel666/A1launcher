@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">A1 Launcher</string>
+    <string name="setup_welcome_title">Welcome to A1 Launcher</string>
+    <string name="setup_welcome_body">A home screen with a built-in AI agent, widgets, and an optional Linux desktop (Arch + Sway) running with no root. Setup only downloads what you choose.</string>
+    <string name="setup_step_bootstrap">Linux environment</string>
+    <string name="setup_step_compositor">Desktop (Sway)</string>
+    <string name="setup_step_agents">AI agent CLIs</string>
+    <string name="setup_step_review">Review &amp; install</string>
+    <string name="setup_skip_linux">Skip Linux desktop for now</string>
+    <string name="agent_status_widget_description">Shows AI agent and Linux session status on your home screen.</string>
+    <string name="assistant_bubble_label">AI Agent</string>
+    <string name="linux_desktop_label">Linux Desktop</string>
+    <string name="action_open_app_drawer">Open app drawer</string>
+    <string name="action_open_assistant">Open AI agent</string>
+    <string name="action_open_linux_desktop">Open Linux desktop</string>
+</resources>
