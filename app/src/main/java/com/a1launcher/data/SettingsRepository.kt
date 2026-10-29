@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
-import com.a1launcher.model.AgentCli
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -42,10 +41,10 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.LINUX_ENV_READY] = ready }
     }
 
-    suspend fun markAgentInstalled(agent: AgentCli) {
+    suspend fun markAgentInstalled(agentBin: String) {
         context.dataStore.edit { prefs ->
             val current = prefs[Keys.INSTALLED_AGENTS] ?: emptySet()
-            prefs[Keys.INSTALLED_AGENTS] = current + agent.id
+            prefs[Keys.INSTALLED_AGENTS] = current + agentBin
         }
     }
 

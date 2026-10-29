@@ -10,7 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
+import com.a1launcher.ui.theme.A1Theme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +21,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.a1launcher.A1LauncherApp
 import com.a1launcher.assistant.AssistantChatActivity
-import com.a1launcher.linuxdesktop.LinuxDesktopActivity
 import com.a1launcher.setup.SetupWizardActivity
 import kotlinx.coroutines.launch
 
@@ -53,7 +52,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme {
+            A1Theme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var drawerOpen by remember { mutableStateOf(false) }
                     val appListViewModel: AppListViewModel by viewModels()
@@ -76,7 +75,9 @@ class MainActivity : ComponentActivity() {
                             startActivity(Intent(this@MainActivity, AssistantChatActivity::class.java))
                         },
                         onOpenLinuxDesktop = {
-                            startActivity(Intent(this@MainActivity, LinuxDesktopActivity::class.java))
+                            // Opens a terminal; its toplevel creation is what starts
+                            // LinuxWindowActivity as its own Recents card (LinuxRuntime.kt).
+                            (application as A1LauncherApp).linuxRuntime.openTerminal()
                         },
                         onAddWidget = { launchWidgetPicker() },
                         onRemoveWidget = { viewModel.removeWidget(it) },

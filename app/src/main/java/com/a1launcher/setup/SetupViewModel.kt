@@ -4,9 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.a1launcher.A1LauncherApp
+import com.a1launcher.linux.AGENTS
+import com.a1launcher.linux.Agent
 import com.a1launcher.linux.ProotInstallService
-import com.a1launcher.model.AgentCli
 import com.a1launcher.model.InstallProgress
+import com.a1launcher.model.InstallStep
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,8 +28,12 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     private val _wantsLinuxDesktop = MutableStateFlow(true)
     val wantsLinuxDesktop: StateFlow<Boolean> = _wantsLinuxDesktop.asStateFlow()
 
-    private val _selectedAgents = MutableStateFlow<Set<AgentCli>>(setOf(AgentCli.CLAUDE))
-    val selectedAgents: StateFlow<Set<AgentCli>> = _selectedAgents.asStateFlow()
+    private val _selectedAgents = MutableStateFlow<Set<Agent>>(setOf(AGENTS.first { it.bin == "claude" }))
+    val selectedAgents: StateFlow<Set<Agent>> = _selectedAgents.asStateFlow()
+
+    /** Not one of AGENTS: a hosted-API key for A1's own assistant overlay, not a guest CLI install. */
+    private val _useOpenRouter = MutableStateFlow(false)
+    val useOpenRouter: StateFlow<Boolean> = _useOpenRouter.asStateFlow()
 
     private val _openRouterKey = MutableStateFlow("")
     val openRouterKey: StateFlow<String> = _openRouterKey.asStateFlow()
@@ -39,12 +45,16 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         _wantsLinuxDesktop.value = value
     }
 
-    fun toggleAgent(agent: AgentCli) {
+    fun toggleAgent(agent: Agent) {
         _selectedAgents.value = if (agent in _selectedAgents.value) {
             _selectedAgents.value - agent
         } else {
             _selectedAgents.value + agent
         }
+    }
+
+    fun setUseOpenRouter(value: Boolean) {
+        _useOpenRouter.value = value
     }
 
     fun setOpenRouterKey(key: String) {
@@ -57,25 +67,24 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun beginInstall() {
         _step.value = WizardStep.INSTALLING
-        val agentIds = _selectedAgents.value.map { it.id }
-        val key = _openRouterKey.value.ifBlank { null }
-        if (key != null) {
-            settingsRepository.saveOpenRouterApiKey(key)
-        }
+        val agentBins = _selectedAgents.value.map { it.bin }
+        val key = _openRouterKey.value.takeIf { _useOpenRouter.value }?.ifBlank { null }
+
         if (!_wantsLinuxDesktop.value) {
-            // No Linux desktop: still record setup as complete without starting the service.
+            // No Linux environment: still record setup as complete, and save the OpenRouter
+            // key if given (the in-app assistant works even without the Linux side).
             viewModelScope.launch {
+                key?.let { settingsRepository.saveOpenRouterApiKey(it) }
                 settingsRepository.markSetupComplete()
                 _step.value = WizardStep.DONE
             }
             return
         }
-        ProotInstallService.start(getApplication(), agentIds, key)
+
+        ProotInstallService.start(getApplication(), agentBins, key)
         viewModelScope.launch {
             installProgress.collect { progress ->
-                if (progress.step is com.a1launcher.model.InstallStep.Done ||
-                    progress.step is com.a1launcher.model.InstallStep.Failed
-                ) {
+                if (progress.step is InstallStep.Done || progress.step is InstallStep.Failed) {
                     settingsRepository.markSetupComplete()
                     _step.value = WizardStep.DONE
                 }

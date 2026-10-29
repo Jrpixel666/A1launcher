@@ -45,7 +45,7 @@
             </intent-filter>
         </activity>
 
-        <!-- First-launch setup wizard: Arch bootstrap, Sway install, agent CLI picker. -->
+        <!-- First-launch setup wizard: Arch bootstrap, agent CLI picker. -->
         <activity
             android:name=".setup.SetupWizardActivity"
             android:exported="false"
@@ -57,17 +57,17 @@
             android:theme="@style/Theme.A1Launcher" />
 
         <!--
-          The Linux desktop session (Sway, under proot-distro Arch) as its own native
-          Android task. A distinct taskAffinity plus singleTask is what gives it its
-          own Recents card, separate from the launcher home task, per the
-          "single Linux Desktop task" design (see README: Linux GUI Integration).
+          Each Linux GUI window as its own native Android task: one Activity class,
+          launched fresh (documentLaunchMode="always" + FLAG_ACTIVITY_NEW_DOCUMENT in
+          LinuxRuntime.kt) per window, so every one gets its own Recents card and
+          behaves like a separate app. taskAffinity="" keeps it out of the launcher's
+          own task. See README: Linux GUI Integration.
         -->
         <activity
-            android:name=".linuxdesktop.LinuxDesktopActivity"
+            android:name=".linuxdesktop.LinuxWindowActivity"
             android:exported="false"
-            android:taskAffinity="com.a1launcher.linuxdesktop"
-            android:launchMode="singleTask"
-            android:documentLaunchMode="never"
+            android:taskAffinity=""
+            android:documentLaunchMode="always"
             android:excludeFromRecents="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
             android:theme="@style/Theme.A1Launcher.NoActionBar"

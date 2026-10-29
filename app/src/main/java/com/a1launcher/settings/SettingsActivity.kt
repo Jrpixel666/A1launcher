@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.a1launcher.assistant.AssistantOverlayService
+import com.a1launcher.ui.theme.A1Theme
 
 class SettingsActivity : ComponentActivity() {
 
@@ -34,7 +35,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            A1Theme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var bubbleEnabled by remember { mutableStateOf(false) }
 

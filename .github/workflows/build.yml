@@ -21,8 +21,17 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Install NDK (matches scripts/fetch-proot.sh's NDK_VERSION)
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;30.0.16248370"
+
+      - name: Install bsdtar (fetch-proot.sh needs it to read .deb/source archives)
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools
+
+      - name: Grant execute permissions
+        run: chmod +x gradlew scripts/fetch-proot.sh
+
+      - name: Build the real proot/libtalloc/libandroid-shmem binaries
+        run: ./scripts/fetch-proot.sh
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --no-daemon

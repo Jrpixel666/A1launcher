@@ -12,7 +12,6 @@ import androidx.core.app.NotificationCompat
 import com.a1launcher.A1LauncherApp
 import com.a1launcher.R
 import com.a1launcher.home.MainActivity
-import com.a1launcher.model.AgentCli
 import com.a1launcher.model.InstallProgress
 import com.a1launcher.model.InstallStep
 import kotlinx.coroutines.CoroutineScope
@@ -21,8 +20,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /**
@@ -35,7 +32,7 @@ import kotlinx.coroutines.launch
 class ProotInstallService : Service() {
 
     companion object {
-        const val EXTRA_SELECTED_AGENT_IDS = "selected_agent_ids"
+        const val EXTRA_SELECTED_AGENT_BINS = "selected_agent_bins"
         const val EXTRA_OPENROUTER_KEY = "openrouter_key"
         private const val CHANNEL_ID = "linux_setup"
         private const val NOTIFICATION_ID = 42
@@ -43,9 +40,9 @@ class ProotInstallService : Service() {
         private val _progress = MutableStateFlow(InstallProgress())
         val progress: StateFlow<InstallProgress> = _progress.asStateFlow()
 
-        fun start(context: Context, selectedAgentIds: List<String>, openRouterKey: String?) {
+        fun start(context: Context, selectedAgentBins: List<String>, openRouterKey: String?) {
             val intent = Intent(context, ProotInstallService::class.java).apply {
-                putStringArrayListExtra(EXTRA_SELECTED_AGENT_IDS, ArrayList(selectedAgentIds))
+                putStringArrayListExtra(EXTRA_SELECTED_AGENT_BINS, ArrayList(selectedAgentBins))
                 putExtra(EXTRA_OPENROUTER_KEY, openRouterKey)
             }
             context.startForegroundService(intent)
@@ -54,41 +51,52 @@ class ProotInstallService : Service() {
 
     private val job = Job()
     private val scope = CoroutineScope(Dispatchers.Default + job)
-    private lateinit var manager: ProotManager
+    private lateinit var proot: Proot
+    private lateinit var bootstrap: Bootstrap
+    private lateinit var agentStore: AgentStore
 
     override fun onCreate() {
         super.onCreate()
-        manager = ProotManager(this)
+        proot = Proot(this)
+        bootstrap = Bootstrap(this, proot)
+        agentStore = AgentStore(proot)
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, buildNotification("Setting up Linux environment…"))
 
-        val agentIds = intent?.getStringArrayListExtra(EXTRA_SELECTED_AGENT_IDS) ?: arrayListOf()
+        val agentBins = intent?.getStringArrayListExtra(EXTRA_SELECTED_AGENT_BINS) ?: arrayListOf()
         val openRouterKey = intent?.getStringExtra(EXTRA_OPENROUTER_KEY)
-        val agents = AgentCli.entries.filter { it.id in agentIds }
+        val agents = AGENTS.filter { it.bin in agentBins }
 
         scope.launch { runInstall(agents, openRouterKey) }
         return START_NOT_STICKY
     }
 
-    private suspend fun runInstall(agents: List<AgentCli>, openRouterKey: String?) {
+    private suspend fun runInstall(agents: List<Agent>, openRouterKey: String?) {
         val settings = (application as A1LauncherApp).settingsRepository
         try {
-            if (!manager.isReady()) {
-                runStep(InstallStep.DownloadingRootfs) { manager.bootstrapArch() }
+            proot.prepare()
+            bootstrap.run { step, fraction, log ->
+                _progress.value = InstallProgress(step, fraction, log)
+                updateNotification(step.toUserLabel())
             }
-            runStep(InstallStep.InstallingCompositor) { manager.installSway() }
 
+            agentStore.load()
             for (agent in agents) {
-                val key = if (agent == AgentCli.OPENROUTER) openRouterKey else null
-                runStep(InstallStep.InstallingAgent(agent)) { manager.installAgent(agent, key) }
-                settings.markAgentInstalled(agent)
+                _progress.value = _progress.value.copy(step = InstallStep.InstallingAgent(agent))
+                updateNotification("Installing ${agent.name}…")
+                agentStore.install(agent)
+                settings.markAgentInstalled(agent.bin)
+            }
+
+            if (!openRouterKey.isNullOrBlank()) {
+                settings.saveOpenRouterApiKey(openRouterKey)
             }
 
             settings.markLinuxEnvironmentReady(true)
-            _progress.value = InstallProgress(step = InstallStep.Done, percent = 100)
+            _progress.value = InstallProgress(step = InstallStep.Done, fraction = 1f)
             updateNotification("Linux environment ready")
         } catch (t: Throwable) {
             _progress.value = InstallProgress(step = InstallStep.Failed(t.message ?: "Unknown error"))
@@ -99,25 +107,14 @@ class ProotInstallService : Service() {
         }
     }
 
-    private suspend fun runStep(step: InstallStep, scriptFlow: () -> kotlinx.coroutines.flow.Flow<String>) {
-        val tail = mutableListOf<String>()
-        _progress.value = _progress.value.copy(step = step)
-        updateNotification(step.toUserLabel())
-        scriptFlow()
-            .catch { throw it }
-            .collect { line ->
-                tail.add(line)
-                if (tail.size > 50) tail.removeAt(0)
-                _progress.value = _progress.value.copy(logTail = tail.toList())
-            }
-    }
-
     private fun InstallStep.toUserLabel(): String = when (this) {
-        is InstallStep.DownloadingRootfs -> "Downloading Arch Linux rootfs…"
-        is InstallStep.ExtractingRootfs -> "Extracting rootfs…"
-        is InstallStep.ConfiguringPacman -> "Configuring package manager…"
-        is InstallStep.InstallingCompositor -> "Installing Sway desktop…"
-        is InstallStep.InstallingAgent -> "Installing ${agent.displayName}…"
+        is InstallStep.Downloading -> "Downloading Arch Linux ARM…"
+        is InstallStep.Extracting -> "Extracting rootfs…"
+        is InstallStep.Configuring -> "Configuring the guest…"
+        is InstallStep.CheckingDevice -> "Checking device compatibility…"
+        is InstallStep.InstallingPackages -> "Installing base packages…"
+        is InstallStep.CompilingKeymap -> "Compiling the keyboard layout…"
+        is InstallStep.InstallingAgent -> "Installing ${agent.name}…"
         is InstallStep.Done -> "Linux environment ready"
         is InstallStep.Failed -> "Setup failed: $message"
         is InstallStep.NotStarted -> "Preparing…"

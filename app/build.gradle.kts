@@ -8,15 +8,24 @@ plugins {
 android {
     namespace = "com.a1launcher"
     compileSdk = 34
+    // Matches Omalauncher's baseline: below API 29, Android's W^X enforcement (which the
+    // jniLibs-as-proot-binary trick in ProotPaths.kt/fetch-proot.sh works around) differs,
+    // and that's the floor this was actually validated against upstream.
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
         applicationId = "com.a1launcher"
-        minSdk = 26
+        minSdk = 29
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
 
+        ndk { abiFilters += "arm64-v8a" }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    externalNativeBuild {
+        cmake { path = file("src/main/cpp/CMakeLists.txt") }
     }
 
     buildTypes {
@@ -46,6 +55,12 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        jniLibs {
+            // proot/busybox under jniLibs are executed by path (ProotPaths.kt), not dlopen'd,
+            // so they must land as real files in nativeLibraryDir, not stay zipped in the APK.
+            useLegacyPackaging = true
+            keepDebugSymbols += listOf("**/libproot.so", "**/libproot-loader.so")
         }
     }
 }
@@ -83,6 +98,9 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+
+    // Streamed, hard-link-safe tar.gz extraction for the Arch Linux ARM rootfs (linux/Bootstrap.kt)
+    implementation("org.apache.commons:commons-compress:1.26.2")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

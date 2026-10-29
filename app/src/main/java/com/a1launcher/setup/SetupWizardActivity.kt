@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.material3.MaterialTheme
+import com.a1launcher.ui.theme.A1Theme
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
@@ -18,11 +18,12 @@ class SetupWizardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            A1Theme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val step by viewModel.step.collectAsStateWithLifecycle()
                     val wantsLinux by viewModel.wantsLinuxDesktop.collectAsStateWithLifecycle()
                     val selectedAgents by viewModel.selectedAgents.collectAsStateWithLifecycle()
+                    val useOpenRouter by viewModel.useOpenRouter.collectAsStateWithLifecycle()
                     val openRouterKey by viewModel.openRouterKey.collectAsStateWithLifecycle()
                     val progress by viewModel.installProgress.collectAsStateWithLifecycle()
 
@@ -37,8 +38,10 @@ class SetupWizardActivity : ComponentActivity() {
                         )
                         WizardStep.AGENTS -> AgentPickerScreen(
                             selectedAgents = selectedAgents,
+                            useOpenRouter = useOpenRouter,
                             openRouterKey = openRouterKey,
                             onToggleAgent = viewModel::toggleAgent,
+                            onToggleOpenRouter = viewModel::setUseOpenRouter,
                             onOpenRouterKeyChange = viewModel::setOpenRouterKey,
                             onNext = { viewModel.goTo(WizardStep.REVIEW) },
                         )

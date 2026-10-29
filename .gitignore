@@ -1,5 +1,6 @@
 *.iml
 .gradle/
+.kotlin/
 .idea/
 .DS_Store
 build/
@@ -12,3 +13,10 @@ local.properties
 *.dex
 *.class
 app/release/
+
+# Built by scripts/fetch-proot.sh, not committed (same convention as upstream
+# Omalauncher): a build still works without these, but every Linux feature
+# fails at runtime with a clear "proot binary missing" condition until it's
+# run once.
+app/src/main/jniLibs/
+
