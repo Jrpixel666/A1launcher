@@ -84,6 +84,11 @@ class MainActivity : ComponentActivity() {
                         onOpenSettings = {
                             startActivity(Intent(this@MainActivity, com.a1launcher.settings.SettingsActivity::class.java))
                         },
+                        onOpenOfflineAi = {
+                            // The Offline AI section lives in Settings (install/model
+                            // picker/start-stop); this is the menu shortcut straight to it.
+                            startActivity(Intent(this@MainActivity, com.a1launcher.settings.SettingsActivity::class.java))
+                        },
                     )
 
                     AnimatedVisibility(visible = drawerOpen) {

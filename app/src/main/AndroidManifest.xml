@@ -100,6 +100,16 @@
                 android:value="linux_environment_setup" />
         </service>
 
+        <!-- Builds llama.cpp + downloads a model for fully offline AI chat. -->
+        <service
+            android:name=".linux.LlamaCppInstallService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="offline_ai_setup" />
+        </service>
+
         <receiver
             android:name=".widget.AgentStatusWidgetReceiver"
             android:exported="false">

@@ -97,6 +97,56 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Android-GPU (MIT)
+
+The offline/local AI feature (`linux/LlamaCpp.kt`, `linux/LlamaServerRuntime.kt`,
+`linux/LlamaCppInstallService.kt`, `assistant/LocalLlamaBackend.kt`, the
+curated small-model list in `model/LocalAiState.kt`, and the "Offline AI"
+section in Settings) is adapted from the *approach* taken by
+[AbuZar-Ansarii/Android-GPU](https://github.com/AbuZar-Ansarii/Android-GPU)
+(MIT, Copyright (c) 2026 AbuZar Ansari): build
+[llama.cpp](https://github.com/ggml-org/llama.cpp) from source, offer a
+curated list of small GGUF instruct models to download, and run
+`llama-server`'s OpenAI-compatible endpoint locally for fully offline chat.
+No code from that repo is copied — it's a Python/Flask app designed to run
+under Termux (Bionic libc) with its own web UI, which isn't applicable
+here; this project's version builds for the proot Arch guest (glibc) and
+plugs into A1 Launcher's own `AgentBackend` interface and Compose UI
+instead. The curated model list (names, sizes, Hugging Face URLs) and the
+`llama-server` CLI flags used are carried over as-is, since those are the
+same regardless of which app launches the server.
+
+```
+MIT License
+
+Copyright (c) 2026 AbuZar Ansari
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## llama.cpp
+
+`linux/LlamaCpp.kt` clones and builds
+[ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp) from source at
+setup time inside the guest; none of its source or binaries are checked
+into this repo. See that project for its own (MIT) license.
+
 ## Termux `proot`
 
 `scripts/fetch-proot.sh` builds `proot`, `libtalloc`, and

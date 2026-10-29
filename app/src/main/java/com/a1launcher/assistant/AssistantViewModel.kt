@@ -5,14 +5,19 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.a1launcher.A1LauncherApp
 import com.a1launcher.model.ChatMessage
+import com.a1launcher.model.LOCAL_MODELS
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AssistantViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val settingsRepository = (application as A1LauncherApp).settingsRepository
+    private val app get() = getApplication<Application>() as A1LauncherApp
+    private val settingsRepository = app.settingsRepository
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -20,7 +25,17 @@ class AssistantViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isSending = MutableStateFlow(false)
     val isSending: StateFlow<Boolean> = _isSending.asStateFlow()
 
-    private fun backend(): AgentBackend {
+    /** Prefers the offline local model when one's installed and the user asked for it; else OpenRouter; else nothing configured. */
+    private suspend fun backend(): AgentBackend {
+        val preferLocal = settingsRepository.preferLocalAi.first()
+        val localModelId = settingsRepository.localAiModelId.first()
+        if (preferLocal && localModelId != null) {
+            val model = LOCAL_MODELS.firstOrNull { it.id == localModelId }
+            if (model != null) {
+                withContext(Dispatchers.IO) { app.llamaServerRuntime.start(model) }
+                return LocalLlamaBackend()
+            }
+        }
         val key = settingsRepository.getOpenRouterApiKey()
         return if (key != null) OpenRouterBackend(apiKey = key) else NotConfiguredBackend()
     }

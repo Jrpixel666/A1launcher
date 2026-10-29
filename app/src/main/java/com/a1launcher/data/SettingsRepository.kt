@@ -3,6 +3,7 @@ package com.a1launcher.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -22,6 +23,8 @@ class SettingsRepository(private val context: Context) {
         val SETUP_COMPLETE = booleanPreferencesKey("setup_complete")
         val LINUX_ENV_READY = booleanPreferencesKey("linux_env_ready")
         val INSTALLED_AGENTS = stringSetPreferencesKey("installed_agents")
+        val LOCAL_AI_MODEL_ID = stringPreferencesKey("local_ai_model_id")
+        val PREFER_LOCAL_AI = booleanPreferencesKey("prefer_local_ai")
     }
 
     val isSetupComplete: Flow<Boolean> =
@@ -32,6 +35,13 @@ class SettingsRepository(private val context: Context) {
 
     val installedAgentIds: Flow<Set<String>> =
         context.dataStore.data.map { it[Keys.INSTALLED_AGENTS] ?: emptySet() }
+
+    /** Null until a local model has finished downloading (see LlamaCppInstallService). */
+    val localAiModelId: Flow<String?> =
+        context.dataStore.data.map { it[Keys.LOCAL_AI_MODEL_ID] }
+
+    val preferLocalAi: Flow<Boolean> =
+        context.dataStore.data.map { it[Keys.PREFER_LOCAL_AI] ?: false }
 
     suspend fun markSetupComplete() {
         context.dataStore.edit { it[Keys.SETUP_COMPLETE] = true }
@@ -46,6 +56,14 @@ class SettingsRepository(private val context: Context) {
             val current = prefs[Keys.INSTALLED_AGENTS] ?: emptySet()
             prefs[Keys.INSTALLED_AGENTS] = current + agentBin
         }
+    }
+
+    suspend fun markLocalAiInstalled(modelId: String) {
+        context.dataStore.edit { it[Keys.LOCAL_AI_MODEL_ID] = modelId }
+    }
+
+    suspend fun setPreferLocalAi(prefer: Boolean) {
+        context.dataStore.edit { it[Keys.PREFER_LOCAL_AI] = prefer }
     }
 
     private val encryptedPrefs by lazy {

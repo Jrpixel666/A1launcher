@@ -33,7 +33,10 @@ com.a1launcher
 │   ├── Agents.kt             The Agent list + mise-based install (AgentStore)
 │   ├── ProcShim.kt           /proc stand-ins Android hides from apps (btop etc.)
 │   ├── LinuxRuntime.kt       The Wayland server + window manager, process-wide
-│   └── ProotInstallService.kt  Foreground service driving Bootstrap + AgentStore
+│   ├── ProotInstallService.kt  Foreground service driving Bootstrap + AgentStore
+│   ├── LlamaCpp.kt           Builds llama.cpp + runs llama-server, for offline AI
+│   ├── LlamaServerRuntime.kt Starts/stops the local llama-server process
+│   └── LlamaCppInstallService.kt  Foreground service driving the llama.cpp build
 ├── wayland/                  The Wayland compositor itself (no Sway/Hyprland/Qtile needed)
 │   ├── WaylandServer.kt / Compositor.kt / XdgShell.kt / Input.kt / Seat.kt / ...
 │   ├── WindowManager.kt      One Android task per toplevel — see below
@@ -41,10 +44,13 @@ com.a1launcher
 │   └── Native.kt             JNI bindings to cpp/wlbridge.c
 ├── linuxdesktop/LinuxWindowActivity.kt  One Linux window = one Android task
 ├── assistant/                The AI agent chat overlay
-│   ├── AgentBackend.kt / OpenRouterBackend.kt
+│   ├── AgentBackend.kt / OpenRouterBackend.kt / LocalLlamaBackend.kt
+│   ├── OpenAiCompatible.kt   Shared OpenAI-style chat-completions client
 │   ├── AssistantViewModel.kt / AssistantChatScreen.kt / AssistantChatActivity.kt
 │   └── AssistantOverlayService.kt  Draggable floating bubble
-├── settings/SettingsActivity.kt
+├── settings/
+│   ├── SettingsActivity.kt   Also hosts the "Offline AI" install/model/start-stop section
+│   └── LocalAiViewModel.kt
 ├── data/                     DataStore + EncryptedSharedPreferences
 └── model/                    InstallState, ChatMessage
 
@@ -129,6 +135,31 @@ Plus `claude`, `opencode`, `codex`, `grok`, `copilot`, `crush`,
 hosted-API key for A1's own in-app assistant (`OpenRouterBackend.kt`), not
 a guest CLI.
 
+### Offline AI: llama.cpp, built in the guest
+
+A Dock shortcut ("Offline AI", next to "Linux") and a matching section in
+Settings build [llama.cpp](https://github.com/ggml-org/llama.cpp) from
+source inside the proot guest, download one of a few small GGUF instruct
+models, and run its `llama-server` on `127.0.0.1:8090`. `LocalLlamaBackend`
+talks to that exactly like `OpenRouterBackend` talks to OpenRouter's API —
+same OpenAI-compatible request/response shape (`OpenAiCompatible.kt`),
+just no API key and no network once the model is downloaded. Toggling
+"Use for assistant chat" in Settings makes `AssistantViewModel` prefer it
+over OpenRouter.
+
+The approach — build from source, curated small-model list, local
+OpenAI-compatible server — is adapted from
+[AbuZar-Ansarii/Android-GPU](https://github.com/AbuZar-Ansarii/Android-GPU)
+(MIT; see THIRD_PARTY.md), which does the same thing under Termux. Not
+reused as-is: that project's prebuilt `android-arm64` release binaries are
+built against Bionic (Android's/Termux's libc) and won't run in this
+project's glibc-based Arch guest, so this builds from source with Arch's
+own toolchain instead; its Vulkan GPU-offload path also isn't wired up
+here, for the same reason as the rest of this project's GPU story (see
+below) — this runs CPU-only.
+hosted-API key for A1's own in-app assistant (`OpenRouterBackend.kt`), not
+a guest CLI.
+
 ## What's real, and what's still a deliberate gap
 
 **Real and working, verified to build an APK from this exact source tree:**
@@ -175,6 +206,16 @@ Schubert and contributors, MIT licensed. See `THIRD_PARTY.md` for the full
 license text and a per-file note on what was trimmed or changed. Everything
 not listed there — the launcher UI, widgets, setup wizard, assistant
 overlay, settings — is this project's own.
+
+The offline/local AI feature (`linux/LlamaCpp.kt`, `linux/LlamaServerRuntime.kt`,
+`linux/LlamaCppInstallService.kt`, `assistant/LocalLlamaBackend.kt`) adapts
+the *approach* taken by
+[AbuZar-Ansarii/Android-GPU](https://github.com/AbuZar-Ansarii/Android-GPU)
+(MIT) — building llama.cpp from source and running its OpenAI-compatible
+server locally — into A1 Launcher's own `AgentBackend`/Compose UI, rather
+than reusing its code directly (it's a Termux-targeted Python/Flask app
+with its own web UI). See THIRD_PARTY.md for the license text and exactly
+what carried over (the curated model list, the `llama-server` CLI flags).
 
 ## Building
 

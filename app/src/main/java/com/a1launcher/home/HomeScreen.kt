@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Button
@@ -44,6 +45,7 @@ fun HomeScreen(
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenOfflineAi: () -> Unit,
 ) {
     Scaffold(
         floatingActionButton = {
@@ -65,6 +67,7 @@ fun HomeScreen(
                     onOpenDrawer = onOpenDrawer,
                     onOpenLinuxDesktop = onOpenLinuxDesktop,
                     onOpenSettings = onOpenSettings,
+                    onOpenOfflineAi = onOpenOfflineAi,
                 )
             }
         }
@@ -112,6 +115,7 @@ private fun Dock(
     onOpenDrawer: () -> Unit,
     onOpenLinuxDesktop: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenOfflineAi: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -124,6 +128,9 @@ private fun Dock(
         DockButton(icon = Icons.Filled.Apps, label = "Apps", onClick = onOpenDrawer)
         AnimatedVisibility(visible = isLinuxReady) {
             DockButton(icon = Icons.Filled.Dns, label = "Linux", onClick = onOpenLinuxDesktop)
+        }
+        AnimatedVisibility(visible = isLinuxReady) {
+            DockButton(icon = Icons.Filled.Bolt, label = "Offline AI", onClick = onOpenOfflineAi)
         }
         DockButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onOpenSettings)
     }
